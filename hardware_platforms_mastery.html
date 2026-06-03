@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardware Platforms Mastery Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#07070f;--bg2:#0c0c1a;--panel:#10101e;--border:#1a1a30;
+    --accent:#f9ca24;--accent2:#f0932b;--accent3:#6ab04c;--accent4:#22a6b3;
+    --text:#e8eaf6;--muted:#5a5a7a;
+    --ph1:#f9ca24;--ph2:#f0932b;--ph3:#e84393;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(249,202,36,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(249,202,36,.018) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+  .app-shell{max-width:1520px;margin:0 auto;padding:0 20px 64px;position:relative;z-index:1}
+  .header{text-align:center;padding:52px 0 56px}
+  .header-badge{display:inline-block;background:rgba(249,202,36,.08);border:1px solid rgba(249,202,36,.3);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:4px;padding:6px 16px;margin-bottom:20px;text-transform:uppercase}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,7vw,110px);line-height:.9;letter-spacing:2px;background:linear-gradient(130deg,#fff 0%,var(--accent) 55%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+  .subtitle{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:3px;margin-bottom:36px}
+  .stats-row{display:flex;justify-content:center;gap:32px;flex-wrap:wrap}
+  .stat{text-align:center}
+  .stat-num{font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--accent);line-height:1}
+  .stat-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+  .global-prog{background:var(--panel);border:1px solid var(--border);padding:20px 28px;margin-bottom:28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .gp-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;white-space:nowrap}
+  .gp-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;min-width:160px}
+  .gp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
+  .gp-chips{display:flex;flex-wrap:wrap;gap:16px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+  .chip strong{color:var(--accent)}
+  .legend{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;padding:28px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:40px 0 28px}
+  .legend-item{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+  .legend-dot{width:10px;height:10px;border-radius:50%}
+  .workspace{display:grid;grid-template-columns:minmax(220px,290px) 1fr;gap:0;align-items:start;border:1px solid var(--border);background:var(--panel);overflow:hidden}
+  @media(max-width:900px){.workspace{grid-template-columns:1fr}.rail{position:relative!important;max-height:none!important;border-right:none!important;border-bottom:1px solid var(--border)}}
+  .rail{position:sticky;top:0;align-self:start;max-height:100vh;overflow-y:auto;background:var(--bg2);border-right:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px}
+  .rail-head{padding:20px 16px;border-bottom:1px solid var(--border);color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+  .rail-phase{padding:10px 16px 6px;color:var(--ph2);font-size:10px;letter-spacing:3px;text-transform:uppercase}
+  .rail-phase.ph1{color:var(--ph1)}
+  .rail-phase.ph3{color:var(--ph3)}
+  .rail a.nav-mod{display:flex;align-items:center;gap:10px;padding:10px 16px;color:var(--text);text-decoration:none;border-left:3px solid transparent;transition:background .15s,border-color .15s}
+  .rail a.nav-mod:hover{background:rgba(249,202,36,.06)}
+  .rail a.nav-mod.active{background:rgba(249,202,36,.1);border-left-color:var(--accent);color:#fff}
+  .rail a.nav-mod .mi{opacity:.45;width:22px;text-align:center}
+  .rail a.nav-mod .mt{flex:1;line-height:1.35}
+  .stage{padding:28px 32px 40px;min-height:70vh;background:var(--bg)}
+  .module-view{display:none;animation:fade .2s ease}
+  .module-view.active{display:block}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .detail-panel{border:1px solid var(--border);overflow:hidden}
+  .detail-panel.ph1{box-shadow:inset 3px 0 0 var(--ph1)}
+  .detail-panel.ph2{box-shadow:inset 3px 0 0 var(--ph2)}
+  .detail-panel.ph3{box-shadow:inset 3px 0 0 var(--ph3)}
+  .detail-top{padding:24px 28px;border-bottom:1px solid var(--border);background:var(--panel);position:relative}
+  .detail-top .big-idx{position:absolute;top:16px;right:20px;font-family:'Bebas Neue',sans-serif;font-size:56px;color:rgba(255,255,255,.04);line-height:1}
+  .detail-top .ico{font-size:28px;display:block;margin-bottom:10px}
+  .detail-top h2{font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#fff;margin-bottom:10px;letter-spacing:.5px}
+  .detail-top .detail-desc{font-size:12px;color:var(--muted);line-height:1.75;max-width:900px}
+  .question-sheet{padding:20px 24px 28px}
+  .prog-inline{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+  .prog-inline .bar{flex:1;min-width:120px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+  .prog-inline .fill{height:100%;background:var(--accent);width:0%;transition:width .3s}
+  .module-status{font-size:10px;color:var(--muted)}
+  .status-notstarted{color:var(--muted)!important}
+  .status-inprogress{color:var(--accent2)!important}
+  .status-done{color:var(--accent3)!important}
+  .q-table{width:100%;border-collapse:collapse;font-size:12px}
+  .q-table th{text-align:left;font-size:10px;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:1px}
+  .q-table td{padding:10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+  .q-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+  .q-text{color:var(--text);line-height:1.55}
+  .q-check{width:18px;height:18px;border:1px solid var(--border);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
+  .q-check:hover{border-color:var(--accent)}
+  .q-check.checked{background:var(--accent3);border-color:var(--accent3)}
+  .q-check.checked::after{content:'✓';font-size:11px;color:#000;font-weight:800}
+  .q-row.checked .q-text{text-decoration:line-through;color:var(--muted);opacity:.7}
+  .q-type{font-size:10px;padding:2px 8px;border-radius:2px;text-transform:lowercase;white-space:nowrap}
+  .type-theory{color:var(--accent);border:1px solid rgba(249,202,36,.3)}
+  .type-code{color:#74b9ff;border:1px solid rgba(116,185,255,.3)}
+  .q-issue-cell{display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:90px}
+  .q-issue-input{font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 7px;width:80px;outline:none;transition:border-color .15s;border-radius:2px}
+  .q-issue-input:focus{border-color:var(--accent)}
+  .q-issue-input::placeholder{color:var(--muted);opacity:.6}
+  .q-issue-btn{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 7px;cursor:pointer;transition:all .15s;white-space:nowrap;border-radius:2px}
+  .q-issue-btn:hover{color:var(--accent);border-color:var(--accent);background:rgba(249,202,36,.08)}
+  .q-issue-btn.has-issue{color:var(--accent3);border-color:rgba(106,176,76,.4)}
+  .footer{text-align:center;padding:36px 0 0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;border-top:1px solid var(--border);margin-top:48px}
+  .footer span{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="app-shell">
+<div class="header">
+  <div class="header-badge">// mastery series · srivathsan98</div>
+  <h1>HARDWARE PLATFORMS</h1>
+  <div class="subtitle">x86 · ARM · RISC-V · JETSON · FPGA · MCU · SoC · SECURITY · PERFORMANCE</div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num">18</div><div class="stat-label">Modules</div></div>
+    <div class="stat"><div class="stat-num">540</div><div class="stat-label">Questions</div></div>
+    <div class="stat"><div class="stat-num">3</div><div class="stat-label">Phases</div></div>
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Depth</div></div>
+  </div>
+</div>
+<div class="global-prog">
+  <span class="gp-label">OVERALL PROGRESS</span>
+  <div class="gp-track"><div class="gp-fill" id="gp-fill" style="width:0%"></div></div>
+  <div class="gp-chips">
+    <span class="chip"><strong id="gp-done">0</strong> / 540 done</span>
+    <span class="chip"><strong id="gp-pct">0%</strong></span>
+    <span class="chip"><strong id="gp-mods">0</strong> / 18 modules complete</span>
+  </div>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--ph1)"></div>Phase 1 · Foundations</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--ph2)"></div>Phase 2 · Intermediate</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--ph3)"></div>Phase 3 · Advanced</div>
+  <div class="legend-item"><div style="width:32px;height:2px;background:var(--accent)"></div>Theory</div>
+  <div class="legend-item"><div style="width:32px;height:2px;background:#74b9ff"></div>Coding</div>
+</div>
+<div class="workspace">
+  <nav class="rail" aria-label="Modules"><div class="rail-head">Modules</div>
+  <div class="rail-phase ph1">Phase 01 · Foundations</div>
+  <a href="#m01" class="nav-mod" data-mid="m01"><span class="mi">🖥️</span><span class="mt">01 · x86/x64 Architecture</span></a>
+  <a href="#m02" class="nav-mod" data-mid="m02"><span class="mi">💪</span><span class="mt">02 · ARM Architecture</span></a>
+  <a href="#m03" class="nav-mod" data-mid="m03"><span class="mi">🔵</span><span class="mt">03 · RISC-V Architecture</span></a>
+  <a href="#m04" class="nav-mod" data-mid="m04"><span class="mi">⚡</span><span class="mt">04 · NVIDIA Jetson Platform</span></a>
+  <a href="#m05" class="nav-mod" data-mid="m05"><span class="mi">🤖</span><span class="mt">05 · Raspberry Pi & SBCs</span></a>
+  <div class="rail-phase ph2">Phase 02 · Intermediate</div>
+  <a href="#m06" class="nav-mod" data-mid="m06"><span class="mi">🔲</span><span class="mt">06 · FPGA Platforms</span></a>
+  <a href="#m07" class="nav-mod" data-mid="m07"><span class="mi">📟</span><span class="mt">07 · Microcontrollers</span></a>
+  <a href="#m08" class="nav-mod" data-mid="m08"><span class="mi">🔌</span><span class="mt">08 · PCIe & High-Speed Interfaces</span></a>
+  <a href="#m09" class="nav-mod" data-mid="m09"><span class="mi">📡</span><span class="mt">09 · Embedded Interfaces</span></a>
+  <a href="#m10" class="nav-mod" data-mid="m10"><span class="mi">🧠</span><span class="mt">10 · GPU Hardware Platforms</span></a>
+  <a href="#m11" class="nav-mod" data-mid="m11"><span class="mi">🌐</span><span class="mt">11 · Network SoCs & SmartNICs</span></a>
+  <div class="rail-phase ph3">Phase 03 · Advanced</div>
+  <a href="#m12" class="nav-mod" data-mid="m12"><span class="mi">🔬</span><span class="mt">12 · Hardware Security</span></a>
+  <a href="#m13" class="nav-mod" data-mid="m13"><span class="mi">🤖</span><span class="mt">13 · AI/ML Accelerators</span></a>
+  <a href="#m14" class="nav-mod" data-mid="m14"><span class="mi">📱</span><span class="mt">14 · Mobile SoCs</span></a>
+  <a href="#m15" class="nav-mod" data-mid="m15"><span class="mi">🏭</span><span class="mt">15 · Automotive & Industrial SoCs</span></a>
+  <a href="#m16" class="nav-mod" data-mid="m16"><span class="mi">🌐</span><span class="mt">16 · Server & Cloud Hardware</span></a>
+  <a href="#m17" class="nav-mod" data-mid="m17"><span class="mi">🔩</span><span class="mt">17 · Hardware Bring-Up & BSP</span></a>
+  <a href="#m18" class="nav-mod" data-mid="m18"><span class="mi">📊</span><span class="mt">18 · Performance Engineering on Hardware</span></a>
+  </nav>
+  <main class="stage" id="main-stage">
+
+<section class="module-view" id="view-m01" data-mid="m01">
+  <div class="detail-panel ph1">
+    <div class="detail-top">
+      <span class="big-idx">01</span>
+      <span class="ico">🖥️</span>
+      <h2>x86/x64 Architecture</h2>
+      <p class="detail-desc">ISA, registers, memory model, paging, privilege rings, BIOS/UEFI, boot</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m01-prog" class="chip">0/30</span>
+        <span id="m01-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m01-bar"></div></div>
+        <span id="m01-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m01-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m02" data-mid="m02">
+  <div class="detail-panel ph1">
+    <div class="detail-top">
+      <span class="big-idx">02</span>
+      <span class="ico">💪</span>
+      <h2>ARM Architecture</h2>
+      <p class="detail-desc">Cortex-A/R/M profiles, AArch64, Thumb, TrustZone, NEON, SVE, boot</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m02-prog" class="chip">0/30</span>
+        <span id="m02-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m02-bar"></div></div>
+        <span id="m02-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m02-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m03" data-mid="m03">
+  <div class="detail-panel ph1">
+    <div class="detail-top">
+      <span class="big-idx">03</span>
+      <span class="ico">🔵</span>
+      <h2>RISC-V Architecture</h2>
+      <p class="detail-desc">ISA design, privilege levels, extensions, PMP, SBI, RISC-V boot</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m03-prog" class="chip">0/30</span>
+        <span id="m03-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m03-bar"></div></div>
+        <span id="m03-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m03-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m04" data-mid="m04">
+  <div class="detail-panel ph1">
+    <div class="detail-top">
+      <span class="big-idx">04</span>
+      <span class="ico">⚡</span>
+      <h2>NVIDIA Jetson Platform</h2>
+      <p class="detail-desc">Jetson family, Xavier/Orin SoC, CUDA on Jetson, DeepStream, JetPack</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m04-prog" class="chip">0/30</span>
+        <span id="m04-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m04-bar"></div></div>
+        <span id="m04-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m04-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m05" data-mid="m05">
+  <div class="detail-panel ph1">
+    <div class="detail-top">
+      <span class="big-idx">05</span>
+      <span class="ico">🤖</span>
+      <h2>Raspberry Pi & SBCs</h2>
+      <p class="detail-desc">BCM SoC, Pi 5, GPIO, SPI/I2C/UART, camera stack, real-time use</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m05-prog" class="chip">0/30</span>
+        <span id="m05-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m05-bar"></div></div>
+        <span id="m05-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m05-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m06" data-mid="m06">
+  <div class="detail-panel ph2">
+    <div class="detail-top">
+      <span class="big-idx">06</span>
+      <span class="ico">🔲</span>
+      <h2>FPGA Platforms</h2>
+      <p class="detail-desc">Xilinx/AMD Zynq, Intel/Altera, HLS, partial reconfiguration, PCIe FPGA</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m06-prog" class="chip">0/30</span>
+        <span id="m06-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m06-bar"></div></div>
+        <span id="m06-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m06-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m07" data-mid="m07">
+  <div class="detail-panel ph2">
+    <div class="detail-top">
+      <span class="big-idx">07</span>
+      <span class="ico">📟</span>
+      <h2>Microcontrollers</h2>
+      <p class="detail-desc">STM32, ESP32, RP2040, Nordic nRF, bare-metal, RTOS, HAL, power mgmt</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m07-prog" class="chip">0/30</span>
+        <span id="m07-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m07-bar"></div></div>
+        <span id="m07-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m07-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m08" data-mid="m08">
+  <div class="detail-panel ph2">
+    <div class="detail-top">
+      <span class="big-idx">08</span>
+      <span class="ico">🔌</span>
+      <h2>PCIe & High-Speed Interfaces</h2>
+      <p class="detail-desc">PCIe topology, TLPs, DMA, SR-IOV, CXL, NVMe, USB, Thunderbolt</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m08-prog" class="chip">0/30</span>
+        <span id="m08-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m08-bar"></div></div>
+        <span id="m08-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m08-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m09" data-mid="m09">
+  <div class="detail-panel ph2">
+    <div class="detail-top">
+      <span class="big-idx">09</span>
+      <span class="ico">📡</span>
+      <h2>Embedded Interfaces</h2>
+      <p class="detail-desc">SPI, I2C, UART, CAN, RS-485, I2S/PCM, MIPI CSI/DSI, Ethernet PHY</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m09-prog" class="chip">0/30</span>
+        <span id="m09-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m09-bar"></div></div>
+        <span id="m09-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m09-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m10" data-mid="m10">
+  <div class="detail-panel ph2">
+    <div class="detail-top">
+      <span class="big-idx">10</span>
+      <span class="ico">🧠</span>
+      <h2>GPU Hardware Platforms</h2>
+      <p class="detail-desc">NVIDIA GPU arch, AMD RDNA/CDNA, Intel Xe, memory hierarchy, interconnects</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m10-prog" class="chip">0/30</span>
+        <span id="m10-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m10-bar"></div></div>
+        <span id="m10-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m10-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m11" data-mid="m11">
+  <div class="detail-panel ph2">
+    <div class="detail-top">
+      <span class="big-idx">11</span>
+      <span class="ico">🌐</span>
+      <h2>Network SoCs & SmartNICs</h2>
+      <p class="detail-desc">Marvell Octeon, NVIDIA BlueField, Pensando, P4, eBPF offload</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m11-prog" class="chip">0/30</span>
+        <span id="m11-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m11-bar"></div></div>
+        <span id="m11-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m11-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m12" data-mid="m12">
+  <div class="detail-panel ph3">
+    <div class="detail-top">
+      <span class="big-idx">12</span>
+      <span class="ico">🔬</span>
+      <h2>Hardware Security</h2>
+      <p class="detail-desc">Side-channels, fault injection, secure boot, attestation, TPM, HSM</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m12-prog" class="chip">0/30</span>
+        <span id="m12-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m12-bar"></div></div>
+        <span id="m12-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m12-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m13" data-mid="m13">
+  <div class="detail-panel ph3">
+    <div class="detail-top">
+      <span class="big-idx">13</span>
+      <span class="ico">🤖</span>
+      <h2>AI/ML Accelerators</h2>
+      <p class="detail-desc">TPU, NPU, dataflow, wafer-scale, in-memory compute, neuromorphic</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m13-prog" class="chip">0/30</span>
+        <span id="m13-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m13-bar"></div></div>
+        <span id="m13-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m13-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m14" data-mid="m14">
+  <div class="detail-panel ph3">
+    <div class="detail-top">
+      <span class="big-idx">14</span>
+      <span class="ico">📱</span>
+      <h2>Mobile SoCs</h2>
+      <p class="detail-desc">Apple M-series, Qualcomm Snapdragon, Samsung Exynos, MediaTek Dimensity</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m14-prog" class="chip">0/30</span>
+        <span id="m14-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m14-bar"></div></div>
+        <span id="m14-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m14-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m15" data-mid="m15">
+  <div class="detail-panel ph3">
+    <div class="detail-top">
+      <span class="big-idx">15</span>
+      <span class="ico">🏭</span>
+      <h2>Automotive & Industrial SoCs</h2>
+      <p class="detail-desc">ADAS SoCs, ISO 26262, NXP i.MX, Renesas R-Car, TI TDA, functional safety</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m15-prog" class="chip">0/30</span>
+        <span id="m15-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m15-bar"></div></div>
+        <span id="m15-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m15-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m16" data-mid="m16">
+  <div class="detail-panel ph3">
+    <div class="detail-top">
+      <span class="big-idx">16</span>
+      <span class="ico">🌐</span>
+      <h2>Server & Cloud Hardware</h2>
+      <p class="detail-desc">Xeon, EPYC, Graviton, Ampere, CXL fabric, composable infra</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m16-prog" class="chip">0/30</span>
+        <span id="m16-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m16-bar"></div></div>
+        <span id="m16-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m16-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m17" data-mid="m17">
+  <div class="detail-panel ph3">
+    <div class="detail-top">
+      <span class="big-idx">17</span>
+      <span class="ico">🔩</span>
+      <h2>Hardware Bring-Up & BSP</h2>
+      <p class="detail-desc">Board bring-up, schematic review, U-Boot, device tree, PMIC, debug</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m17-prog" class="chip">0/30</span>
+        <span id="m17-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m17-bar"></div></div>
+        <span id="m17-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m17-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="module-view" id="view-m18" data-mid="m18">
+  <div class="detail-panel ph3">
+    <div class="detail-top">
+      <span class="big-idx">18</span>
+      <span class="ico">📊</span>
+      <h2>Performance Engineering on Hardware</h2>
+      <p class="detail-desc">PMU counters, cache profiling, memory latency, SIMD, compiler flags</p>
+    </div>
+    <div class="question-sheet">
+      <div class="prog-inline">
+        <span id="m18-prog" class="chip">0/30</span>
+        <span id="m18-status" class="module-status status-notstarted">Not started</span>
+        <div class="bar"><div class="fill" id="m18-bar"></div></div>
+        <span id="m18-barpct" style="font-size:10px;color:var(--muted)">0%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr><th style="width:36px">✓</th><th style="width:52px">#</th><th>Question</th><th style="width:70px">Type</th><th style="width:96px">Issue #</th></tr></thead>
+        <tbody id="m18-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+  </main>
+</div>
+
+<div class="footer">Built with ⚡ · <span>Hardware Platforms</span> Mastery Tracker · 18 Modules · 540 Questions</div>
+</div>
+
+<script>
+const SKEY="hardware_platforms_mastery_v1";
+const GH_REPO="Srivathsan98/Hardware-Platforms-Mastery";
+const MODULES_DATA={
+  "m01": [{"t": "What is an ISA (Instruction Set Architecture)? How does x86-64 differ from IA-32?", "k": "theory"}, {"t": "List all general-purpose registers in x86-64 (RAX\u2013R15). What are their conventional uses in the System V ABI?", "k": "theory"}, {"t": "What are the x86 RFLAGS bits? Explain CF, ZF, SF, OF, PF, DF, IF, TF.", "k": "theory"}, {"t": "What is the x86 segmentation model? What are CS, DS, SS, ES, FS, GS and are they still relevant in 64-bit mode?", "k": "theory"}, {"t": "What are x86 privilege rings (0\u20133)? What operations require ring 0?", "k": "theory"}, {"t": "Explain the x86 paging hierarchy: CR3, PML4, PDPT, PD, PT, page frames. How is a virtual address translated?", "k": "theory"}, {"t": "What is the TLB? What is a TLB shootdown and when is it required?", "k": "theory"}, {"t": "What is the x86 BIOS vs UEFI boot process? What is the UEFI boot sequence from power-on to OS handoff?", "k": "theory"}, {"t": "What is ACPI? What are DSDT, SSDT, and FADT tables and how does the OS use them?", "k": "theory"}, {"t": "What is SMM (System Management Mode)? What is SMRAM and how is it protected?", "k": "theory"}, {"t": "What is the CPUID instruction? How do you query CPU features (SSE4, AVX, AES-NI)?", "k": "theory"}, {"t": "What is MSR (Model-Specific Register)? Give 5 important MSRs and what they control.", "k": "theory"}, {"t": "What is the x86 memory type range register (MTRR)? How does it interact with PAT?", "k": "theory"}, {"t": "What is Intel VT-x? How does VMXON/VMLAUNCH enable hardware-assisted virtualization?", "k": "theory"}, {"t": "What is Intel TXT (Trusted Execution Technology)? How does it establish a measured launch environment?", "k": "theory"}, {"t": "Write a C program that uses CPUID to detect AVX-512 support and print cache topology.", "k": "code"}, {"t": "Write an x86-64 assembly function that performs AES-NI encryption using AESENC instruction.", "k": "code"}, {"t": "Write a Linux kernel module that reads and prints key MSRs (IA32_PERF_STATUS, IA32_ENERGY_STATUS).", "k": "code"}, {"t": "Write a UEFI application in C (EDK2) that enumerates all memory map entries and prints their types.", "k": "code"}, {"t": "Write an assembly program that toggles the WP bit in CR0 to disable write protection temporarily.", "k": "code"}, {"t": "Write a paging walker in C: given CR3, parse the 4-level page table and translate a virtual address.", "k": "code"}, {"t": "Write a program that uses RDTSC before and after a memory access to measure cache miss penalty.", "k": "code"}, {"t": "Write a CPUID-based feature detection library in C that returns a bitmask of supported extensions.", "k": "code"}, {"t": "Write a boot sector in x86 real-mode assembly that prints 'Hello' via BIOS INT 10h.", "k": "code"}, {"t": "Write a minimal UEFI bootloader that loads a flat binary from the EFI System Partition and jumps to it.", "k": "code"}, {"t": "What is PAE (Physical Address Extension)? How does it allow 32-bit x86 to address > 4 GB?", "k": "theory"}, {"t": "What is x86 Control Flow Enforcement (CET)? What are shadow stack and ENDBRANCH?", "k": "theory"}, {"t": "What is Intel ME (Management Engine)? What security risks does it pose?", "k": "theory"}, {"t": "What is the x87 FPU vs SSE vs AVX for floating point? When would you use each?", "k": "theory"}, {"t": "What is the IOMMU (Intel VT-d / AMD-Vi)? How does it protect against DMA attacks?", "k": "theory"}],
+  "m02": [{"t": "What are the three ARM Cortex profiles: A, R, and M? What is each optimized for?", "k": "theory"}, {"t": "Explain the AArch64 register file: X0\u2013X30, SP, PC, XZR. What are the calling convention roles?", "k": "theory"}, {"t": "What are the AArch64 exception levels EL0\u2013EL3? What runs at each level?", "k": "theory"}, {"t": "What is ARM TrustZone? How does it partition the SoC into Secure and Normal worlds?", "k": "theory"}, {"t": "What is the ARM Memory Model? Explain the Load-Acquire / Store-Release barrier instructions.", "k": "theory"}, {"t": "What is NEON (Advanced SIMD)? How does it differ from SVE (Scalable Vector Extension)?", "k": "theory"}, {"t": "What is the ARM Thumb instruction set? What is Thumb-2 and why does it matter for code density?", "k": "theory"}, {"t": "What is the ARMv8-A page table format? How does the TTBR0/TTBR1 split user/kernel VA space?", "k": "theory"}, {"t": "What is MTE (Memory Tagging Extension)? How does it detect heap UAF at hardware speed?", "k": "theory"}, {"t": "What is Pointer Authentication (PAC)? How do PACIASP/AUTIASP protect return addresses?", "k": "theory"}, {"t": "What is Branch Target Identification (BTI)? How does it prevent JOP attacks?", "k": "theory"}, {"t": "What is ARM's SMCCC (Secure Monitor Call Calling Convention)? How does a Normal world caller invoke the Secure Monitor?", "k": "theory"}, {"t": "What is the ARM Generic Interrupt Controller (GIC)? Compare GICv2 and GICv3.", "k": "theory"}, {"t": "What is the ARM System MMU (SMMU)? How does it provide IOMMU functionality for DMA masters?", "k": "theory"}, {"t": "What is OP-TEE? How does it implement a TEE on top of ARM TrustZone?", "k": "theory"}, {"t": "Write an AArch64 assembly function that computes dot product using NEON FMLA instruction.", "k": "code"}, {"t": "Write a bare-metal AArch64 program that initializes the MMU, maps UART registers, and prints a string.", "k": "code"}, {"t": "Write a TrustZone secure world handler in C (OP-TEE TA) that encrypts data passed from Normal world.", "k": "code"}, {"t": "Write a Linux kernel module that reads the ARMv8 PMU counters (PMCCNTR_EL0) for cycle counting.", "k": "code"}, {"t": "Write an AArch64 assembly routine that uses SVE to vectorize a loop over a float array.", "k": "code"}, {"t": "Write a PAC signing/authentication example in AArch64 assembly using PACIB1716.", "k": "code"}, {"t": "Write a GIC interrupt handler in bare-metal C: initialize GICv3 distributor, enable IRQ, handle it.", "k": "code"}, {"t": "Write a spin-lock in AArch64 assembly using LDAXR/STLXR exclusive monitor instructions.", "k": "code"}, {"t": "Write an ARMv8 cache maintenance function: clean and invalidate a range using DC CIVAC.", "k": "code"}, {"t": "Write a bootloader stub that switches from EL3 to EL1 and jumps to a kernel image.", "k": "code"}, {"t": "What is the ARM Cortex-M NVIC? How does interrupt priority preemption work?", "k": "theory"}, {"t": "What is the ARM Cortex-M SysTick timer? How is it used for RTOS tick generation?", "k": "theory"}, {"t": "What is the ARMv8.2-A RAS (Reliability, Availability, Serviceability) extension?", "k": "theory"}, {"t": "What is Armv9 CCA (Confidential Compute Architecture)? What are Realms?", "k": "theory"}, {"t": "What is the ARM CoreSight debug infrastructure? What components enable trace and debug?", "k": "theory"}],
+  "m03": [{"t": "What is RISC-V? What makes it different from x86 and ARM as an ISA?", "k": "theory"}, {"t": "What are the base RISC-V ISAs: RV32I, RV64I, RV128I? What is the minimal mandatory instruction set?", "k": "theory"}, {"t": "What are the standard RISC-V extensions: M, A, F, D, C, V, B, P? What does each add?", "k": "theory"}, {"t": "What is the RISC-V privilege level model: U-mode, S-mode, M-mode? What runs at each?", "k": "theory"}, {"t": "What is the RISC-V SBI (Supervisor Binary Interface)? How does S-mode call M-mode services?", "k": "theory"}, {"t": "What is the RISC-V Physical Memory Protection (PMP)? How does it restrict memory access?", "k": "theory"}, {"t": "What is the RISC-V page table format (Sv32, Sv39, Sv48, Sv57)? How does address translation work?", "k": "theory"}, {"t": "What is the RISC-V CSR (Control and Status Register) space? List 10 important CSRs.", "k": "theory"}, {"t": "What is the RISC-V interrupt model? How are local and global interrupts handled via PLIC and CLINT?", "k": "theory"}, {"t": "What is the RISC-V ABI (ilp32, lp64)? Explain calling convention registers a0\u2013a7, s0\u2013s11, ra.", "k": "theory"}, {"t": "What is the RISC-V V (Vector) extension? How does VLEN and LMUL affect vector register width?", "k": "theory"}, {"t": "What is OpenSBI? How does it implement the SBI specification for RISC-V platforms?", "k": "theory"}, {"t": "What is the RISC-V IOMMU specification? How does it provide DMA isolation?", "k": "theory"}, {"t": "What is the RISC-V Hypervisor extension (H)? How does it enable hardware-assisted virtualization?", "k": "theory"}, {"t": "What is CFI on RISC-V (Zicfilp / Zicfiss)? How does landing-pad and shadow-stack work?", "k": "theory"}, {"t": "Write a RISC-V assembly function that implements memcpy using the C extension compressed instructions.", "k": "code"}, {"t": "Write a bare-metal RISC-V program in C that configures a UART and prints via a memory-mapped register.", "k": "code"}, {"t": "Write a RISC-V trap handler in assembly: save/restore context, dispatch to C handler, mret.", "k": "code"}, {"t": "Write an OpenSBI extension plugin in C that adds a custom SBI call for a platform-specific function.", "k": "code"}, {"t": "Write a PMP configuration routine in C: protect a region of memory from U-mode access.", "k": "code"}, {"t": "Write a RISC-V V extension kernel function in C intrinsics that vectorizes a SAXPY loop.", "k": "code"}, {"t": "Write a page table walker for Sv39 in C: given satp, translate a virtual address.", "k": "code"}, {"t": "Write a CSR read/write benchmark in C that measures the cost of CSR access in cycles.", "k": "code"}, {"t": "Write a RISC-V hypervisor stub in assembly that enters HS-mode and configures a guest VS-mode.", "k": "code"}, {"t": "Write a RISC-V boot sequence in assembly: set up stack, clear BSS, call main, handle return.", "k": "code"}, {"t": "What is CHERI (Capability Hardware Enhanced RISC Instructions) for RISC-V? How do capabilities work?", "k": "theory"}, {"t": "What is the RISC-V debug specification (JTAG DTM, DMI)? How does a debugger connect?", "k": "theory"}, {"t": "What is RISC-V platform firmware architecture (BRS)? How does it standardize booting?", "k": "theory"}, {"t": "What is the RISC-V Profiles specification? How does it group extensions into deployment tiers?", "k": "theory"}, {"t": "What is the difference between a RISC-V soft core (PicoRV32, VexRiscv) and a hard macro?", "k": "theory"}],
+  "m04": [{"t": "What is the NVIDIA Jetson product family? Compare Nano, TX2, Xavier NX, AGX Xavier, AGX Orin, and Orin NX.", "k": "theory"}, {"t": "What is the NVIDIA Ampere GPU architecture on Jetson AGX Orin? How many SMs and CUDA cores does it have?", "k": "theory"}, {"t": "What is JetPack SDK? What components does it include (L4T, CUDA, cuDNN, TensorRT, VPI, Multimedia)?", "k": "theory"}, {"t": "What is L4T (Linux for Tegra)? How does it relate to upstream Linux kernel?", "k": "theory"}, {"t": "What is the Jetson memory architecture? Explain unified LPDDR5 shared between CPU and GPU.", "k": "theory"}, {"t": "What is the Jetson DLA (Deep Learning Accelerator)? How does it differ from the GPU for inference?", "k": "theory"}, {"t": "What is the Jetson PVA (Programmable Vision Accelerator)? What workloads is it optimized for?", "k": "theory"}, {"t": "What is TensorRT on Jetson? How do you convert a PyTorch model to a TensorRT engine for deployment?", "k": "theory"}, {"t": "What is DeepStream SDK? How does it build GStreamer-based AI video analytics pipelines?", "k": "theory"}, {"t": "What is NVIDIA VPI (Vision Programming Interface)? How does it abstract CPU/GPU/PVA/DLA backends?", "k": "theory"}, {"t": "What is Jetson power mode? How do NVPModel profiles trade off performance and power?", "k": "theory"}, {"t": "What is CUDA Unified Memory on Jetson? How does it differ from discrete GPU CUDA UM?", "k": "theory"}, {"t": "What is the Jetson CSI camera interface? How does it connect to V4L2 and the ISP pipeline?", "k": "theory"}, {"t": "What is the Jetson multimedia API? How does hardware-accelerated decode (NVDEC) work?", "k": "theory"}, {"t": "What is Jetson AGX Orin's NVMe/PCIe configuration? How do you attach storage and peripherals?", "k": "theory"}, {"t": "Write a CUDA kernel on Jetson that performs RGB\u2192YUV420 conversion using zero-copy mapped memory.", "k": "code"}, {"t": "Write a TensorRT deployment script in Python: load ONNX, build FP16 engine, run inference on Jetson.", "k": "code"}, {"t": "Write a DeepStream Python pipeline: RTSP source \u2192 nvinfer (YOLOv8) \u2192 nvosd \u2192 display.", "k": "code"}, {"t": "Write a script that switches Jetson power mode using nvpmodel and jetson_clocks.", "k": "code"}, {"t": "Write a V4L2 camera capture program in C on Jetson: open /dev/video0, capture frames, save JPEG.", "k": "code"}, {"t": "Write a CUDA+VPI interop example: process a frame with VPI Harris corners, visualize with OpenCV.", "k": "code"}, {"t": "Write a DLA inference script using TensorRT API: load engine, bind DLA core 0, run inference.", "k": "code"}, {"t": "Write a GStreamer pipeline in Python using DeepStream to detect objects in an MP4 file.", "k": "code"}, {"t": "Write a benchmark comparing GPU vs DLA vs CPU inference latency for a ResNet-18 on Jetson Orin.", "k": "code"}, {"t": "Write a Jetson fan controller script that adjusts fan speed based on thermal zone temperature.", "k": "code"}, {"t": "What is the Jetson Orin SoC block diagram? Identify CPU cluster, GPU, DLA, PVA, and I/O hub.", "k": "theory"}, {"t": "What is MMAPI (Multimedia API) on Jetson? How does NvBufSurface handle multi-planar buffers?", "k": "theory"}, {"t": "What is the Jetson GPIO library? How do you toggle a GPIO pin from user space?", "k": "theory"}, {"t": "What is Jetson Containers? How does Docker work on Jetson with GPU passthrough?", "k": "theory"}, {"t": "What is Isaac ROS? How does it provide GPU-accelerated ROS 2 compute graph packages for Jetson?", "k": "theory"}],
+  "m05": [{"t": "What SoC does the Raspberry Pi 5 use? What CPU, GPU, and I/O capabilities does it provide?", "k": "theory"}, {"t": "What is the Raspberry Pi memory map? Where do peripheral registers appear in physical address space?", "k": "theory"}, {"t": "What is the BCM2712 PCIe interface? How does the Pi 5 connect NVMe and other PCIe devices?", "k": "theory"}, {"t": "What is the Raspberry Pi GPIO? Explain pull-up/pull-down, drive strength, and alternate function selection.", "k": "theory"}, {"t": "What is the Raspberry Pi SPI controller? Explain CPOL, CPHA, and chip-select handling.", "k": "theory"}, {"t": "What is the Raspberry Pi I2C controller? What clock stretching issues exist and how do you work around them?", "k": "theory"}, {"t": "What is the Raspberry Pi UART? Compare the mini-UART (AUX) and the full PL011 UART.", "k": "theory"}, {"t": "What is the Raspberry Pi camera stack? Explain libcamera, Unicam CSI-2 receiver, and ISP pipeline.", "k": "theory"}, {"t": "What is the Raspberry Pi VideoCore GPU? How does it handle display output and hardware video decode?", "k": "theory"}, {"t": "What is the Raspberry Pi real-time capability? How do you reduce scheduling jitter with PREEMPT_RT?", "k": "theory"}, {"t": "What is the Raspberry Pi RP2040 microcontroller (Pico)? How does it differ from the Pi 4/5?", "k": "theory"}, {"t": "What is the RP2040 PIO (Programmable I/O)? How does it implement custom serial protocols in hardware?", "k": "theory"}, {"t": "What is the Raspberry Pi HAT standard? What does the EEPROM store and how is it used?", "k": "theory"}, {"t": "What is gpiod? How does it provide a modern character device interface for GPIO?", "k": "theory"}, {"t": "What are alternative SBCs? Compare NVIDIA Jetson Nano, Rockchip RK3588, BeagleBone Black, and Coral Dev Board.", "k": "theory"}, {"t": "Write a Python script using RPi.GPIO to generate a PWM signal at 50 Hz on GPIO18.", "k": "code"}, {"t": "Write a C program using /dev/spidev0.0 to communicate with an SPI sensor (e.g., MCP3008 ADC).", "k": "code"}, {"t": "Write a C program using /dev/i2c-1 to read temperature from an LM75 sensor.", "k": "code"}, {"t": "Write a gpiod-based interrupt handler in C: wait for rising edge on GPIO17, measure pulse width.", "k": "code"}, {"t": "Write a RP2040 PIO program in PIO assembly that implements a UART TX at 115200 baud.", "k": "code"}, {"t": "Write a libcamera Python script that captures a raw Bayer frame and converts it to PNG.", "k": "code"}, {"t": "Write a DMA-based SPI transfer in C on Pi: set up DMA channel, transfer 1 MB, measure throughput.", "k": "code"}, {"t": "Write a bare-metal Raspberry Pi 4 program in C: initialize UART0, print 'Hello', blink LED.", "k": "code"}, {"t": "Write a PREEMPT_RT latency benchmark on the Pi: measure worst-case interrupt latency with cyclictest.", "k": "code"}, {"t": "Write a script that reads Pi 5 thermal sensors and clocks, logs them every second to CSV.", "k": "code"}, {"t": "What is the Raspberry Pi RP2350? What new features does it add over the RP2040?", "k": "theory"}, {"t": "What is the Raspberry Pi Compute Module? When would you use it instead of a standard Pi?", "k": "theory"}, {"t": "What is CPU frequency scaling on the Pi? How do ondemand, performance, and powersave governors work?", "k": "theory"}, {"t": "What is the Pi's VideoCore firmware blob? What services does it provide to the ARM cores?", "k": "theory"}, {"t": "What is 40-pin GPIO multiplexing on the Pi? How do you reconfigure pin functions using device tree overlays?", "k": "theory"}],
+  "m06": [{"t": "What is an FPGA? How do LUTs, flip-flops, block RAMs, and DSP slices compose its fabric?", "k": "theory"}, {"t": "What is the Xilinx/AMD Zynq-7000? How does it integrate ARM Cortex-A9 PS with PL (FPGA fabric)?", "k": "theory"}, {"t": "What is the Xilinx/AMD Zynq UltraScale+ MPSoC? What processing systems (APU, RPU, PMU) does it include?", "k": "theory"}, {"t": "What is Xilinx/AMD Versal? How does AI Engines (VLIW/SIMD) differ from standard FPGA fabric?", "k": "theory"}, {"t": "What is Intel/Altera Agilex? How does the HBM2e integration benefit compute-intensive applications?", "k": "theory"}, {"t": "What is HLS (High-Level Synthesis)? How does Vitis HLS compile C++ to RTL?", "k": "theory"}, {"t": "What is partial reconfiguration (PR) on FPGAs? How do you swap a PR region at runtime?", "k": "theory"}, {"t": "What is a PCIe FPGA accelerator card (Xilinx Alveo, Intel Stratix)? How does the host communicate via DMA?", "k": "theory"}, {"t": "What is the AXI4 bus protocol? Compare AXI4 Full, AXI4-Lite, and AXI4-Stream.", "k": "theory"}, {"t": "What is a DMA engine (XDMA / QDMA) on an FPGA? How does scatter-gather DMA work?", "k": "theory"}, {"t": "What is the Xilinx Vitis unified software platform? How does it target both embedded and data center applications?", "k": "theory"}, {"t": "What is the OpenCL programming model for FPGAs? How does a kernel get compiled to bitstream?", "k": "theory"}, {"t": "What is a FIFO in FPGA design? How does block RAM FIFO differ from distributed RAM FIFO?", "k": "theory"}, {"t": "What is timing closure in FPGA design? What are setup and hold violations?", "k": "theory"}, {"t": "What is FPGA floorplanning? How do Pblocks constrain logic placement for better timing?", "k": "theory"}, {"t": "Write a Vitis HLS kernel in C++ that performs a 2D convolution and achieves II=1 with pipeline pragma.", "k": "code"}, {"t": "Write a bare-metal C application for the Zynq PS that configures a custom AXI4-Lite IP core.", "k": "code"}, {"t": "Write an AXI4-Stream FIFO in VHDL with configurable depth and width.", "k": "code"}, {"t": "Write a Python script using xrt (Xilinx Runtime) to program a bitstream and call a Vitis kernel.", "k": "code"}, {"t": "Write a PCIe DMA driver in C (XDMA) that transfers a buffer from host DDR to FPGA BRAM.", "k": "code"}, {"t": "Write a partial reconfiguration manager in C: load a partial bitstream at runtime via /dev/xdevcfg.", "k": "code"}, {"t": "Write an OpenCL host program that offloads matrix multiplication to an FPGA kernel.", "k": "code"}, {"t": "Write a Zynq device tree overlay that exposes a custom AXI IP core as a UIO device.", "k": "code"}, {"t": "Write a Python petalinux script that sets up the Zynq PL clock and enables a custom IP core.", "k": "code"}, {"t": "Write a performance benchmark: measure Zynq PS-PL AXI4 bus bandwidth with DMA transfers.", "k": "code"}, {"t": "What is PYNQ? How does it allow Python-based FPGA programming on Zynq platforms?", "k": "theory"}, {"t": "What is the difference between fabric-based DSP and AI Engine (VLIW) for ML inference on Versal?", "k": "theory"}, {"t": "What is configuration memory (CRAM) scrubbing on FPGAs? How does it protect against SEUs?", "k": "theory"}, {"t": "What is a Soft CPU on FPGA (MicroBlaze, Nios II, VexRiscv)? When would you use one instead of hard CPU?", "k": "theory"}, {"t": "What is HBM (High-Bandwidth Memory) integration on FPGAs? What bandwidth does it provide?", "k": "theory"}],
+  "m07": [{"t": "What is a microcontroller vs a microprocessor vs an SoC? How do they differ in integration?", "k": "theory"}, {"t": "What is the STM32 product family? Compare STM32F4, STM32H7, STM32G0, and STM32U5 in terms of core, frequency, and power.", "k": "theory"}, {"t": "What is the ESP32? What wireless connectivity (Wi-Fi + BT), cores (Xtensa LX6/LX7), and peripherals does it integrate?", "k": "theory"}, {"t": "What is the Nordic nRF52840? What BLE 5.0, Zigbee, and Thread capabilities does it provide?", "k": "theory"}, {"t": "What is the RP2040? What is its dual Cortex-M0+ architecture and what makes the PIO unique?", "k": "theory"}, {"t": "What is the STM32 HAL? How does it abstract register-level access and what are its overhead costs?", "k": "theory"}, {"t": "What is the STM32 LL (Low-Level) API? When would you use it instead of HAL?", "k": "theory"}, {"t": "What is a startup file for a Cortex-M microcontroller? What does it do before main() is called?", "k": "theory"}, {"t": "What is the Cortex-M NVIC interrupt controller? Explain priority levels, preemption, and grouping.", "k": "theory"}, {"t": "What is DMA on a microcontroller? How does DMA-based UART reception save CPU cycles?", "k": "theory"}, {"t": "What is an RTOS tick? How do FreeRTOS, Zephyr, and ThreadX schedule tasks?", "k": "theory"}, {"t": "What is FreeRTOS? Compare tasks, queues, semaphores, mutexes, and event groups.", "k": "theory"}, {"t": "What is Zephyr RTOS? How does its device tree model differ from other RTOS platforms?", "k": "theory"}, {"t": "What is MCU power management? Compare active, sleep, deep-sleep, and standby modes on STM32.", "k": "theory"}, {"t": "What is an MCU bootloader? How does the STM32 factory bootloader enable firmware update via UART/USB?", "k": "theory"}, {"t": "Write a bare-metal STM32 program in C: configure PLL to 168 MHz, toggle LED every 500 ms using SysTick.", "k": "code"}, {"t": "Write an STM32 DMA UART receiver in C: receive 64 bytes in circular DMA mode, process complete frame.", "k": "code"}, {"t": "Write a FreeRTOS application on STM32: two tasks share a queue, producer reads ADC, consumer drives DAC.", "k": "code"}, {"t": "Write a Zephyr RTOS application for nRF52840: advertise a BLE GATT service with a custom characteristic.", "k": "code"}, {"t": "Write an ESP32 Wi-Fi station program in C (ESP-IDF): connect to AP, obtain IP, send HTTP GET request.", "k": "code"}, {"t": "Write an RP2040 PIO program in PIO assembly that implements SPI at 10 MHz with configurable CPOL/CPHA.", "k": "code"}, {"t": "Write an STM32 low-power application: wake from STOP mode on RTC alarm every 10 seconds.", "k": "code"}, {"t": "Write a custom bootloader for STM32 in C: verify CRC of application image in flash, jump to it.", "k": "code"}, {"t": "Write a Nordic nRF5 SDK program that implements Thread (OpenThread) and exchanges CoAP messages.", "k": "code"}, {"t": "Write an ESP32 OTA firmware update in C: download new firmware from HTTP server, flash to OTA partition.", "k": "code"}, {"t": "What is the Cortex-M MPU? How do you configure regions to catch null pointer dereferences?", "k": "theory"}, {"t": "What is the Cortex-M HardFault? How do you decode the CFSR, HFSR, and MMFAR registers to diagnose crashes?", "k": "theory"}, {"t": "What is the ARM Cortex-M debug architecture (SWD, JTAG, ITM, ETM)? How does OpenOCD use it?", "k": "theory"}, {"t": "What is a linker script for an MCU? How does it place .text in flash and .data/.bss in SRAM?", "k": "theory"}, {"t": "What is flash wear leveling on an MCU? How do filesystems like LittleFS handle it?", "k": "theory"}],
+  "m08": [{"t": "What is the PCIe topology? Explain root complex, switch, endpoints, and bus/device/function numbering.", "k": "theory"}, {"t": "What are PCIe TLP (Transaction Layer Packets)? Compare Memory Read, Memory Write, Completion, and Config TLPs.", "k": "theory"}, {"t": "What is PCIe BAR (Base Address Register)? How does the OS assign and map device BARs?", "k": "theory"}, {"t": "What is PCIe MSI vs MSI-X? How do they deliver interrupts without IOAPIC routing?", "k": "theory"}, {"t": "What is PCIe DMA? How does a device initiate a bus-mastering DMA transfer to host memory?", "k": "theory"}, {"t": "What are PCIe generations (1.0\u20136.0)? What are the bandwidth per-lane figures for each?", "k": "theory"}, {"t": "What is SR-IOV (Single Root I/O Virtualization)? How do VFs provide near-native I/O to VMs?", "k": "theory"}, {"t": "What is CXL (Compute Express Link)? Compare CXL 1.1, 2.0, and 3.0 and their use cases.", "k": "theory"}, {"t": "What is NVMe? How does it use PCIe queues (SQ/CQ) to achieve low latency vs AHCI?", "k": "theory"}, {"t": "What is USB 3.x SuperSpeed? How does it differ from USB 2.0 in data encoding (8b/10b vs 128b/132b)?", "k": "theory"}, {"t": "What is Thunderbolt 4/5? How does it combine PCIe and DisplayPort over a single cable?", "k": "theory"}, {"t": "What is CCIX (Cache Coherent Interconnect for Accelerators)? How does it compare to CXL?", "k": "theory"}, {"t": "What is Gen-Z (now CXL)? How was it intended to replace PCIe for memory-semantic interconnects?", "k": "theory"}, {"t": "What is a PCIe IOMMU group? How does VFIO use it to pass a device to a VM?", "k": "theory"}, {"t": "What is PCIe AER (Advanced Error Reporting)? How do fatal, non-fatal, and correctable errors work?", "k": "theory"}, {"t": "Write a Linux PCIe kernel driver in C: probe a device, map BAR0, write a register, handle MSI-X interrupt.", "k": "code"}, {"t": "Write a user-space PCIe driver using VFIO: open device, map BARs, perform DMA.", "k": "code"}, {"t": "Write an NVMe command submission in C: allocate SQ/CQ rings, submit an Identify command, poll completion.", "k": "code"}, {"t": "Write a script that enumerates all PCIe devices (lspci -vvv), parses capabilities, and reports link width/speed.", "k": "code"}, {"t": "Write a PCIe DMA throughput benchmark: transfer 1 GB host\u2194device, measure BW in both directions.", "k": "code"}, {"t": "Write a libusb program in C that enumerates all USB devices and reads their device descriptor.", "k": "code"}, {"t": "Write a VFIO passthrough script: bind a NIC to vfio-pci, configure IOMMU groups, attach to QEMU VM.", "k": "code"}, {"t": "Write a CXL Type-3 device simulator in C: implement the CXL.mem protocol handler for DOE mailbox.", "k": "code"}, {"t": "Write an SR-IOV setup script: enable VFs on an Intel NIC, assign to VMs via libvirt.", "k": "code"}, {"t": "Write a PCIe link training monitor: poll LNKSTA register, log link width and speed changes.", "k": "code"}, {"t": "What is PCIe P2P (Peer-to-Peer)? How do two GPUs exchange data directly without going through the CPU?", "k": "theory"}, {"t": "What is the PCIe retimer vs redriver? When do you need active signal conditioning?", "k": "theory"}, {"t": "What is MCTP over PCIe (Management Component Transport Protocol)? How does it manage firmware updates?", "k": "theory"}, {"t": "What is OpenCAPI? How does it compare to CXL for accelerator attachment?", "k": "theory"}, {"t": "What is PCIe bifurcation? How does it split lanes between multiple endpoints?", "k": "theory"}],
+  "m09": [{"t": "Explain SPI protocol: MOSI, MISO, SCK, CS. What are CPOL and CPHA and the four SPI modes?", "k": "theory"}, {"t": "Explain I2C protocol: SDA, SCL, START/STOP, address phase, ACK/NACK, repeated start.", "k": "theory"}, {"t": "What is I2C clock stretching? What is multi-master arbitration and how does it work?", "k": "theory"}, {"t": "Explain UART: baud rate, start bit, data bits, parity, stop bits. What is flow control (RTS/CTS)?", "k": "theory"}, {"t": "What is RS-232 vs RS-485 vs RS-422? How does differential signaling improve noise immunity?", "k": "theory"}, {"t": "What is CAN bus? Explain arbitration, identifier priority, and error confinement (TEC/REC).", "k": "theory"}, {"t": "What is CAN FD? How does it increase payload from 8 to 64 bytes and raise bit rate to 8 Mbit/s?", "k": "theory"}, {"t": "What is I2S? Explain WS (word select), SCK, and SD signals for audio data transmission.", "k": "theory"}, {"t": "What is MIPI CSI-2? How does it transport camera data using D-PHY or C-PHY lanes?", "k": "theory"}, {"t": "What is MIPI DSI? How does it drive display panels using high-speed and low-power modes?", "k": "theory"}, {"t": "What is the Ethernet PHY? How does it interface to the MAC via MII, RMII, GMII, or RGMII?", "k": "theory"}, {"t": "What is MDIO (Management Data I/O)? How does it configure an Ethernet PHY?", "k": "theory"}, {"t": "What is 1-Wire protocol? How does it power and communicate over a single wire?", "k": "theory"}, {"t": "What is LVDS? How is it used for high-speed parallel data transmission in cameras and displays?", "k": "theory"}, {"t": "What is PCM audio? How does TDM (Time Division Multiplexing) extend I2S to multiple channels?", "k": "theory"}, {"t": "Write a Linux SPI driver in C: configure SPI mode 0, transfer 16-byte transaction, handle CS manually.", "k": "code"}, {"t": "Write a Linux I2C user-space program using ioctl(I2C_RDWR) to read 6 bytes from an MPU-6050.", "k": "code"}, {"t": "Write a CAN bus sender in C using SocketCAN: open can0, send a CAN FD frame with 64-byte payload.", "k": "code"}, {"t": "Write a UART DMA driver in C for STM32: receive data in circular DMA mode, detect frame end by idle line.", "k": "code"}, {"t": "Write an RS-485 half-duplex driver in C: control the DE/RE direction pin, send, then receive reply.", "k": "code"}, {"t": "Write a MIPI CSI-2 receiver debug script: parse DT1 and DT2 packet headers, report resolution and format.", "k": "code"}, {"t": "Write an I2S audio capture driver in Linux: open ALSA PCM device, capture 1 second of 48kHz stereo PCM.", "k": "code"}, {"t": "Write a Python script using spidev that reads a 12-bit ADC value from an MCP3204.", "k": "code"}, {"t": "Write a CAN bus frame logger in Python using python-can: filter by arbitration ID, log to CSV.", "k": "code"}, {"t": "Write an MDIO register reader in C using Linux ethtool ioctl: read PHY ID registers 2 and 3.", "k": "code"}, {"t": "What is the SPI QUAD mode (QSPI)? How does it quadruple throughput for flash memory access?", "k": "theory"}, {"t": "What is SMBus? How does it restrict I2C to improve reliability in system management applications?", "k": "theory"}, {"t": "What is UART framing error vs overrun error vs parity error? How does the driver handle each?", "k": "theory"}, {"t": "What is CAN bus error frame? Explain active error, passive error, and bus-off states.", "k": "theory"}, {"t": "What is SerDes (Serializer/Deserializer)? How does 8b/10b encoding ensure DC balance and clock recovery?", "k": "theory"}],
+  "m10": [{"t": "What is an NVIDIA Hopper GPU (H100)? What are the key architectural improvements over Ampere?", "k": "theory"}, {"t": "What is an NVIDIA Blackwell GPU (B100/B200)? What new features does it introduce over Hopper?", "k": "theory"}, {"t": "What is the NVIDIA Tensor Core? Compare first (Volta) through fifth (Blackwell) generation capabilities.", "k": "theory"}, {"t": "What is NVLink 4.0? How does it differ from PCIe for GPU-to-GPU communication bandwidth?", "k": "theory"}, {"t": "What is NVSwitch? How does it create an all-to-all NVLink fabric in DGX/HGX systems?", "k": "theory"}, {"t": "What is the NVIDIA Grace CPU? How does the Grace-Hopper Superchip connect CPU and GPU via NVLink-C2C?", "k": "theory"}, {"t": "What is AMD CDNA (Compute DNA) architecture? Compare CDNA1 (MI100), CDNA2 (MI200), and CDNA3 (MI300).", "k": "theory"}, {"t": "What is AMD ROCm? How does it provide an open-source alternative to CUDA?", "k": "theory"}, {"t": "What is Intel Xe GPU architecture? Compare Xe-LP, Xe-HP, Xe-HPC (Ponte Vecchio), and Xe2.", "k": "theory"}, {"t": "What is oneAPI? How does SYCL provide a unified programming model across CPUs, GPUs, and FPGAs?", "k": "theory"}, {"t": "What is HBM (High Bandwidth Memory)? Compare HBM2, HBM2e, HBM3, and HBM3e in bandwidth and capacity.", "k": "theory"}, {"t": "What is GDDR6 vs GDDR6X vs GDDR7? What are the bandwidth differences and target use cases?", "k": "theory"}, {"t": "What is GPU memory hierarchy: L1 cache, L2 cache, DRAM? How do coalescing and bank conflicts affect performance?", "k": "theory"}, {"t": "What is GPU warp divergence? How does predication handle branches in SIMT execution?", "k": "theory"}, {"t": "What is Multi-Instance GPU (MIG) on Hopper? How does it partition a GPU into isolated instances?", "k": "theory"}, {"t": "Write a CUDA kernel that uses Tensor Core WMMA API (wmma::mma_sync) for FP16 matrix multiplication.", "k": "code"}, {"t": "Write a ROCm HIP kernel equivalent to a CUDA reduction kernel and verify output matches.", "k": "code"}, {"t": "Write a SYCL kernel using Intel oneAPI DPC++ that performs a parallel prefix sum.", "k": "code"}, {"t": "Write an NVLink bandwidth benchmark using CUDA P2P copies between two GPUs.", "k": "code"}, {"t": "Write a CUDA MIG configuration script using nvidia-smi: create 7 1g.10gb instances on an H100.", "k": "code"}, {"t": "Write a GPU memory bandwidth benchmark measuring peak HBM bandwidth with optimal access patterns.", "k": "code"}, {"t": "Write a CUDA program that uses NVTX markers to annotate timeline regions in Nsight Systems.", "k": "code"}, {"t": "Write a multi-GPU all-reduce using NCCL (ncclAllReduce) across 8 GPUs.", "k": "code"}, {"t": "Write a Grace-Hopper NVLink-C2C benchmark: measure zero-copy memory access latency CPU\u2194GPU.", "k": "code"}, {"t": "Write a ROCm rocprof profiling script that measures GPU kernel occupancy and memory bandwidth.", "k": "code"}, {"t": "What is GPU occupancy? How do register count, shared memory, and block size affect it?", "k": "theory"}, {"t": "What is CUDA cooperative groups? How do they enable synchronization beyond a single thread block?", "k": "theory"}, {"t": "What is the NVIDIA NSPECT profiler suite? Compare Nsight Systems, Nsight Compute, and Nsight Graphics.", "k": "theory"}, {"t": "What is persistent kernels? How do they reduce kernel launch overhead for latency-sensitive workloads?", "k": "theory"}, {"t": "What is GPU multi-tenancy? How do time-slicing, MPS, and MIG differ in isolation guarantees?", "k": "theory"}],
+  "m11": [{"t": "What is a Network SoC? Give examples of applications: packet processing, security, storage offload.", "k": "theory"}, {"t": "What is Marvell OCTEON? What CNN/DPDK/ODP processing capabilities does it provide?", "k": "theory"}, {"t": "What is NVIDIA BlueField DPU? How does it offload networking, storage, and security from the host CPU?", "k": "theory"}, {"t": "What is Pensando (now AMD Pensando)? What infrastructure services does the Elba SoC offload?", "k": "theory"}, {"t": "What is a P4 programmable data plane? How does P4 describe match-action pipelines?", "k": "theory"}, {"t": "What is the PSA (Portable Switch Architecture) in P4? How does it define externs, packet paths, and metadata?", "k": "theory"}, {"t": "What is eBPF offload to SmartNIC? How does XDP get compiled and loaded to the NIC?", "k": "theory"}, {"t": "What is DPDK on SmartNIC? How does a DPU run DPDK applications without a host CPU?", "k": "theory"}, {"t": "What is RDMA on BlueField? How does the ConnectX-7 HCA provide InfiniBand and RoCEv2?", "k": "theory"}, {"t": "What is NVMe-oF target offload on BlueField? How does it serve NVMe over RDMA without host CPU involvement?", "k": "theory"}, {"t": "What is the BlueField host channel adapter (HCA) vs DPU mode? How do they differ in traffic ownership?", "k": "theory"}, {"t": "What is inline encryption on a SmartNIC? How does AES-256-XTS get offloaded for storage traffic?", "k": "theory"}, {"t": "What is ASAP2 (Accelerated Switching and Packet Processing) in Mellanox/NVIDIA NICs?", "k": "theory"}, {"t": "What is a network flow table? How does the BlueField software-defined networking stack update it?", "k": "theory"}, {"t": "What is Accelnet (Google Cloud vNIC)? How does it implement a programmable vSwitch in hardware?", "k": "theory"}, {"t": "Write a P4 program for a simple L2 forwarding switch: parse Ethernet, match dst MAC, forward or flood.", "k": "code"}, {"t": "Write a P4 program that implements an IP routing table using LPM match on the destination address.", "k": "code"}, {"t": "Write a DPDK application that runs on BlueField Arm cores: receive from host VF, forward to wire.", "k": "code"}, {"t": "Write an eBPF XDP program that is compiled for SmartNIC offload: count packets per source IP.", "k": "code"}, {"t": "Write a BlueField DOCA Flow API program that creates a pipe to steer traffic based on 5-tuple.", "k": "code"}, {"t": "Write a P4Runtime gRPC client in Python that inserts a forwarding table entry into a P4 switch.", "k": "code"}, {"t": "Write an RDMA send/receive program using libibverbs that transfers 1 GB between two BlueField DPUs.", "k": "code"}, {"t": "Write a NVMe-oF target setup script on BlueField using nvmet and RDMA transport.", "k": "code"}, {"t": "Write a DOCA application that performs inline AES-256 encryption of storage traffic on BlueField.", "k": "code"}, {"t": "Write a benchmark comparing software OVS vs hardware-offloaded OVS with ASAP2 on a BlueField NIC.", "k": "code"}, {"t": "What is the tofino ASIC (Intel)? How does it implement a P4 programmable Terabit switch?", "k": "theory"}, {"t": "What is SONIC (Software for Open Networking in the Cloud)? How does it use the SAI API?", "k": "theory"}, {"t": "What is a bump-in-the-wire (BITW) security appliance based on a DPU?", "k": "theory"}, {"t": "What is the DOCA SDK? What domains (flow, regex, compress, crypto) does it cover?", "k": "theory"}, {"t": "What is computational storage? How do SmartNIC-like drives offload compute to the storage layer?", "k": "theory"}],
+  "m12": [{"t": "What is a side-channel attack? Compare timing, cache, power analysis, EM, and acoustic channels.", "k": "theory"}, {"t": "What is a Simple Power Analysis (SPA) vs a Differential Power Analysis (DPA) attack?", "k": "theory"}, {"t": "What is a cache-timing attack? How does Flush+Reload recover AES keys from shared caches?", "k": "theory"}, {"t": "What is Spectre? Which CPU microarchitectural feature does it exploit and what data can it leak?", "k": "theory"}, {"t": "What is Meltdown? How does speculative out-of-order execution leak kernel memory to user space?", "k": "theory"}, {"t": "What is a fault injection attack? Compare voltage glitching, clock glitching, and laser fault injection.", "k": "theory"}, {"t": "What is a cold boot attack? How does DRAM remanence allow key recovery after power loss?", "k": "theory"}, {"t": "What is a hardware Trojan? How is it inserted during IC design or fabrication?", "k": "theory"}, {"t": "What is a TPM (Trusted Platform Module)? What security functions does TPM 2.0 provide?", "k": "theory"}, {"t": "What is measured boot? How does the CRTM extend PCR values for each boot component?", "k": "theory"}, {"t": "What is remote attestation? How does a TPM quote prove platform integrity to a verifier?", "k": "theory"}, {"t": "What is an HSM (Hardware Security Module)? How does PKCS#11 provide a standard API to it?", "k": "theory"}, {"t": "What is Intel SGX? How does an enclave protect code and data from a compromised OS?", "k": "theory"}, {"t": "What is AMD SEV (Secure Encrypted Virtualization)? How does SEV-SNP add integrity protection?", "k": "theory"}, {"t": "What is JTAG security? How do lock bits, debug authentication, and fuse-based disabling protect devices?", "k": "theory"}, {"t": "Implement a timing attack on a naive string comparison in C and measure nanosecond differences.", "k": "code"}, {"t": "Write a Flush+Reload cache side-channel demo in C that leaks a secret byte via cache access timing.", "k": "code"}, {"t": "Write a TPM2 attestation flow using tpm2-tools: create AK, get quote, verify with known PCR values.", "k": "code"}, {"t": "Write an SGX enclave in C that performs AES encryption of data passed from untrusted host code.", "k": "code"}, {"t": "Write a PKCS#11 client in C using SoftHSM2: generate RSA key pair, sign data, verify signature.", "k": "code"}, {"t": "Write a Spectre v1 PoC in C that reads out-of-bounds data via speculative array access.", "k": "code"}, {"t": "Write a voltage glitching simulation: repeatedly reset and monitor a target for fault-induced skip.", "k": "code"}, {"t": "Write a secure boot chain verifier in C: verify each stage's signature using mbedTLS before jumping.", "k": "code"}, {"t": "Write a TPM PCR extend and seal operation in C using tpm2-tss ESAPI.", "k": "code"}, {"t": "Write an AMD SEV-SNP guest measurement verification script using snpguest tool.", "k": "code"}, {"t": "What is CHERI hardware capability? How does it enforce fine-grained memory safety in silicon?", "k": "theory"}, {"t": "What is confidential computing? How do TEEs (SGX, TDX, SEV, TrustZone) enable it?", "k": "theory"}, {"t": "What is Intel TDX (Trust Domain Extensions)? How does it extend VMX for confidential VMs?", "k": "theory"}, {"t": "What is a physical unclonable function (PUF)? How does it generate a device-unique key?", "k": "theory"}, {"t": "What is supply chain security for hardware? How do NIST SP 800-161 and SCRM address it?", "k": "theory"}],
+  "m13": [{"t": "What is a TPU (Tensor Processing Unit)? How does the systolic array architecture differ from a GPU?", "k": "theory"}, {"t": "What is the Google TPU v4/v5? What ICI (Inter-Chip Interconnect) bandwidth connects pods?", "k": "theory"}, {"t": "What is an NPU (Neural Processing Unit) in a mobile SoC (Apple ANE, Qualcomm Hexagon, Samsung NPU)?", "k": "theory"}, {"t": "What is Qualcomm Snapdragon DSP + HVX? How does the Hexagon Vector eXtensions accelerate AI?", "k": "theory"}, {"t": "What is Apple Neural Engine? How does it integrate with the M-series CPU/GPU for Core ML inference?", "k": "theory"}, {"t": "What is Cerebras WSE (Wafer Scale Engine)? How does integrating 900,000 cores on a single wafer help?", "k": "theory"}, {"t": "What is Groq LPU (Language Processing Unit)? How does its deterministic dataflow architecture work?", "k": "theory"}, {"t": "What is a dataflow architecture? How do Graphcore IPU and SambaNova RDU differ from von Neumann machines?", "k": "theory"}, {"t": "What is in-memory computing (Processing-in-Memory)? How does it reduce data movement for AI?", "k": "theory"}, {"t": "What is neuromorphic computing? How do Intel Loihi 2 and IBM TrueNorth model spiking neural networks?", "k": "theory"}, {"t": "What is the Hailo-8 NPU? How does its dataflow compile model into hardware pipeline stages?", "k": "theory"}, {"t": "What is the Kneron KL720? How does it serve edge AI inference with < 1 W?", "k": "theory"}, {"t": "What is weight stationary vs output stationary vs row stationary dataflow in systolic arrays?", "k": "theory"}, {"t": "What is roofline analysis for AI accelerators? How does arithmetic intensity determine memory vs compute bound?", "k": "theory"}, {"t": "What is a memory bandwidth wall? How do HBM-integrated accelerators (H100, MI300X) address it?", "k": "theory"}, {"t": "Write a JAX/XLA program that compiles to TPU: fused matrix multiply-add with sharding across 8 TPUs.", "k": "code"}, {"t": "Write a Core ML conversion pipeline: PyTorch \u2192 ONNX \u2192 Core ML, verify output on Apple Silicon.", "k": "code"}, {"t": "Write a TFLite delegate benchmark: compare CPU, GPU (OpenCL), and NNAPI inference latency on Android.", "k": "code"}, {"t": "Write a Hailo Runtime API inference pipeline in Python: load HEF model, run detection on RTSP stream.", "k": "code"}, {"t": "Write a QEMU simulation of a simple systolic array: model PE array, weight loading, and MAC dataflow.", "k": "code"}, {"t": "Write a benchmark comparing CUDA Tensor Core vs CPU (MKL) for FP16 GEMM throughput.", "k": "code"}, {"t": "Write a SNNTorch simulation of a spiking network on Loihi 2 (using nxsdk) for MNIST classification.", "k": "code"}, {"t": "Write a Cerebras SDK program that partitions a transformer layer across CSL compute fabric.", "k": "code"}, {"t": "Write a PIM simulation in Python: model compute-in-DRAM for dot product without DRAM read transfer.", "k": "code"}, {"t": "Write a MLIR/LLVM compilation pipeline demo: define a toy dialect, lower to LLVM IR, generate native code.", "k": "code"}, {"t": "What is MLIR? How does it enable progressive lowering for AI compilers (XLA, IREE, TVM)?", "k": "theory"}, {"t": "What is XLA (Accelerated Linear Algebra)? How does it JIT-compile TensorFlow/JAX to TPU/GPU?", "k": "theory"}, {"t": "What is TVM? How does Ansor autotuning find optimal schedules for accelerator targets?", "k": "theory"}, {"t": "What is model sparsity (structured vs unstructured)? How does hardware sparsity support (Ampere 2:4) work?", "k": "theory"}, {"t": "What is chiplet design? How do AMD MCM (multi-chip module) and Intel EMIB connect chiplets at package level?", "k": "theory"}],
+  "m14": [{"t": "What is the Apple M4 SoC? What CPU (P-core/E-core), GPU, NPU, and memory system does it integrate?", "k": "theory"}, {"t": "What is the Apple Unified Memory Architecture (UMA)? How does it differ from discrete GPU VRAM?", "k": "theory"}, {"t": "What is Apple Silicon's memory bandwidth? How does LPDDR5X on-package deliver its throughput?", "k": "theory"}, {"t": "What is Qualcomm Snapdragon 8 Gen 3? What CPU (Cortex-X4/A720/A520), Adreno GPU, and Hexagon NPU does it include?", "k": "theory"}, {"t": "What is the Qualcomm FastConnect 7800? What Wi-Fi 7 and Bluetooth 5.4 features does it provide?", "k": "theory"}, {"t": "What is the Samsung Exynos 2400? How does its decagonal CPU cluster compare to Snapdragon?", "k": "theory"}, {"t": "What is MediaTek Dimensity 9300? What big.LITTLE++ configuration does it use?", "k": "theory"}, {"t": "What is big.LITTLE (DynamIQ)? How does the kernel task scheduler exploit heterogeneous cores?", "k": "theory"}, {"t": "What is a mobile ISP (Image Signal Processor)? What pipeline stages process raw sensor data?", "k": "theory"}, {"t": "What is the mobile security enclave (Apple SEP, Qualcomm SPU)? What keys and operations does it protect?", "k": "theory"}, {"t": "What is LPDDR5X vs LPDDR5 vs LPDDR4X? How do transfer rates and power differ?", "k": "theory"}, {"t": "What is UFS 4.0 (Universal Flash Storage)? How does it achieve sequential read > 4 GB/s?", "k": "theory"}, {"t": "What is 5G modem integration (Snapdragon X75, Apple C1)? How does the mmWave/sub-6GHz architecture work?", "k": "theory"}, {"t": "What is Android's Trusty TEE? How does it interface with the Qualcomm secure processor?", "k": "theory"}, {"t": "What is Apple's Secure Boot chain from Boot ROM to sepOS to iOS kernel?", "k": "theory"}, {"t": "Write a Metal shader in MSL that runs on Apple M4 GPU to perform a GEMM operation.", "k": "code"}, {"t": "Write an Android NDK Vulkan compute shader that processes a 4K image on Adreno GPU.", "k": "code"}, {"t": "Write a Core ML model inference pipeline in Swift on Apple Silicon with ANE delegation.", "k": "code"}, {"t": "Write a NNAPI benchmark on Android: compare CPU, GPU, and DSP delegate latency for MobileNetV3.", "k": "code"}, {"t": "Write a Linux cpufreq governor interaction script: set Snapdragon P-cores to performance, E-cores to powersave.", "k": "code"}, {"t": "Write a Camera2 API program on Android that captures RAW frames and passes them to a custom ISP.", "k": "code"}, {"t": "Write a Qualcomm CDSP offload example using FastRPC: call a Hexagon DSP function from ARM.", "k": "code"}, {"t": "Write an Apple Instruments script (xctrace) that profiles GPU command buffer execution on M4.", "k": "code"}, {"t": "Write a memory bandwidth benchmark on Android using NDK intrinsics to stress LPDDR5X.", "k": "code"}, {"t": "Write a TFLite model deployment script for MediaTek APU via the NNAPI HAL.", "k": "code"}, {"t": "What is Apple's ProRes hardware encode/decode engine? How is it accessed via VideoToolbox?", "k": "theory"}, {"t": "What is Snapdragon's Adreno GPU Vulkan driver architecture? What Vulkan extensions does it support?", "k": "theory"}, {"t": "What is the mobile battery life challenge for AI? How do NPU duty cycling and DVFS help?", "k": "theory"}, {"t": "What is UWB (Ultra-Wideband) in mobile SoCs? How does it enable centimeter-level ranging?", "k": "theory"}, {"t": "What is Apple's custom 5G modem (C1)? What design goals motivated the in-house development?", "k": "theory"}],
+  "m15": [{"t": "What is ISO 26262? What are ASIL A/B/C/D levels and what metrics define them (FMEDA, PMHF, DC)?", "k": "theory"}, {"t": "What is an ADAS SoC? Compare NVIDIA DRIVE Orin, Mobileye EyeQ6, TI TDA4, and Renesas R-Car V4H.", "k": "theory"}, {"t": "What is NVIDIA DRIVE Orin? How does it partition safety-critical (R5F) and non-safety (Cortex-A) workloads?", "k": "theory"}, {"t": "What is the NXP i.MX 8 family? How does it target automotive infotainment and industrial control?", "k": "theory"}, {"t": "What is the Renesas R-Car V4H? What ML accelerator (CNN) and safety mechanisms does it include?", "k": "theory"}, {"t": "What is a lockstep CPU? How does a dual-core lockstep configuration achieve ASIL D?", "k": "theory"}, {"t": "What is an ECC memory? How does SECDED (single-bit error correction, double-bit error detection) work?", "k": "theory"}, {"t": "What is a safety island on an SoC? How does it independently monitor the main application processor?", "k": "theory"}, {"t": "What is watchdog timer (WDT) usage in safety systems? Compare windowed WDT and independent safety WDT.", "k": "theory"}, {"t": "What is HSM (Hardware Security Module) in automotive? How does the SHE (Secure Hardware Extension) standard work?", "k": "theory"}, {"t": "What is AutoSAR Classic vs AutoSAR Adaptive? How do they differ in OS, communication, and deployment?", "k": "theory"}, {"t": "What is Ethernet TSN (Time-Sensitive Networking) in automotive? What 802.1 standards are relevant?", "k": "theory"}, {"t": "What is SOME/IP? How does it provide service-oriented communication for automotive ECUs?", "k": "theory"}, {"t": "What is ADAS sensor fusion? How does a SoC integrate camera, LiDAR, and radar pipelines?", "k": "theory"}, {"t": "What is a real-time hypervisor in automotive? How does QNX Hypervisor or ACRN partition domains?", "k": "theory"}, {"t": "Write a FreeRTOS-based dual-core lockstep health monitor in C for a Cortex-R5F.", "k": "code"}, {"t": "Write an ISO 26262 FMEA worksheet generator in Python: parse failure modes, compute ASIL metrics.", "k": "code"}, {"t": "Write a TI TDA4VM TIDL inference pipeline in C: load model, run on MMA accelerator, get detections.", "k": "code"}, {"t": "Write a Linux device tree for a NXP i.MX8QM board: configure MIPI-CSI2 camera and LVDS display.", "k": "code"}, {"t": "Write a watchdog timer test in C: configure TDA4 MCU WDT, service it in a task, verify reset on miss.", "k": "code"}, {"t": "Write a SOME/IP service example using vsomeip library: publish a temperature sensor value.", "k": "code"}, {"t": "Write an AutoSAR Adaptive ARA::COM service in C++: publish a speed value to subscribers.", "k": "code"}, {"t": "Write a TSN schedule configurator script using tc qdisc taprio for a Renesas R-Car Ethernet port.", "k": "code"}, {"t": "Write a safety monitor in C that compares dual-core outputs and triggers a safe state on mismatch.", "k": "code"}, {"t": "Write a CAN FD bus stress tester in Python using python-can: send 100k frames, verify error counters.", "k": "code"}, {"t": "What is the Mobileye SuperVision system? How does it stack EyeQ chips for L2+ ADAS?", "k": "theory"}, {"t": "What is functional safety software? What are systematic capability levels (SIL vs ASIL)?", "k": "theory"}, {"t": "What is a diagnostic coverage (DC) metric in ISO 26262? How is it measured?", "k": "theory"}, {"t": "What is MISRA C:2023? What rules prevent common embedded safety defects?", "k": "theory"}, {"t": "What is a safety concept in ISO 26262? How does it decompose a safety goal into technical requirements?", "k": "theory"}],
+  "m16": [{"t": "What is Intel 4th/5th Gen Xeon Scalable (Sapphire Rapids/Emerald Rapids)? What AMX and HBM features does it add?", "k": "theory"}, {"t": "What is AMD EPYC Genoa/Bergamo? How does the chiplet MCM design scale to 192 cores?", "k": "theory"}, {"t": "What is AWS Graviton4? How does a custom Arm Neoverse N2 core differ from a generic Arm IP?", "k": "theory"}, {"t": "What is Ampere Altra Max? What 128-core cloud-native design makes it different from x86 server CPUs?", "k": "theory"}, {"t": "What is Intel AMX (Advanced Matrix Extensions)? How do TMUL and tile registers accelerate INT8/BF16 GEMM?", "k": "theory"}, {"t": "What is Intel IAA (In-Memory Analytics Accelerator)? How does it offload compression and crypto?", "k": "theory"}, {"t": "What is Intel DSA (Data Streaming Accelerator)? How does it offload memory move and scatter-gather?", "k": "theory"}, {"t": "What is CXL (Compute Express Link) 2.0? How does CXL.mem enable host-managed device memory?", "k": "theory"}, {"t": "What is a CXL memory expander? How does adding pooled memory improve DRAM bandwidth per socket?", "k": "theory"}, {"t": "What is a composable infrastructure? How do CXL 3.0 fabrics enable shared memory pools across nodes?", "k": "theory"}, {"t": "What is DDR5? How does sub-channel architecture improve bandwidth and error correction over DDR4?", "k": "theory"}, {"t": "What is PCIe 6.0? What does PAM-4 signaling bring to bandwidth per lane?", "k": "theory"}, {"t": "What is an OCP (Open Compute Project) server specification? How does it influence hyperscale hardware design?", "k": "theory"}, {"t": "What is a rack PDU and how does server power budgeting (power capping) work?", "k": "theory"}, {"t": "What is liquid cooling for servers? Compare direct liquid cooling (DLC), rear-door heat exchanger, and immersion.", "k": "theory"}, {"t": "Write a LIKWID benchmark in C that measures Intel AMX BF16 GEMM throughput on Sapphire Rapids.", "k": "code"}, {"t": "Write a CXL Type-3 device driver stub in Linux: register a CXL memdev, expose as DAX device.", "k": "code"}, {"t": "Write a Python script using IPMI (ipmitool) to monitor server temperatures, fan speeds, and power.", "k": "code"}, {"t": "Write a NUMA-aware memory allocator in C: allocate on a specific NUMA node using numa_alloc_onnode.", "k": "code"}, {"t": "Write a PCIe 6.0 throughput benchmark: transfer 128 GB across a CXL link, measure effective bandwidth.", "k": "code"}, {"t": "Write a server power capping script using Intel RAPL: read package energy, set power limit via MSR.", "k": "code"}, {"t": "Write an Intel DSA offload example in C: use idxd driver to perform async memcpy via work queue.", "k": "code"}, {"t": "Write a multi-socket NUMA latency benchmark: measure memory access latency across NUMA nodes.", "k": "code"}, {"t": "Write a server health dashboard using Redfish REST API: poll temperature, power, and event logs.", "k": "code"}, {"t": "Write an AMX tile matrix multiply in C using intrinsics: 16\u00d716 BF16 tiles with _tile_dpbf16ps.", "k": "code"}, {"t": "What is a SmartPMEM (Persistent Memory like Optane DCPMM)? How does App Direct mode work?", "k": "theory"}, {"t": "What is Intel TDX (Trust Domain Extensions)? How does it provide confidential VMs at datacenter scale?", "k": "theory"}, {"t": "What is AMD HSMP (Host System Management Port)? How does firmware expose power and thermal data?", "k": "theory"}, {"t": "What is a power efficiency metric (performance per watt)? How do ARM server CPUs compare to x86?", "k": "theory"}, {"t": "What is disaggregated server architecture? How do composable systems separate CPU, memory, and storage pools?", "k": "theory"}],
+  "m17": [{"t": "What is a BSP (Board Support Package)? What components does a Linux BSP include?", "k": "theory"}, {"t": "What is hardware bring-up? What are the stages from power-on to full OS boot?", "k": "theory"}, {"t": "What is a schematic review checklist? List 10 items to verify for a new SoC board design.", "k": "theory"}, {"t": "What is U-Boot? Explain its role, SPL (Secondary Program Loader), and how it hands off to Linux.", "k": "theory"}, {"t": "What is the U-Boot device tree? How does it differ from the Linux device tree?", "k": "theory"}, {"t": "What is a Linux device tree? How does it describe hardware topology to the kernel without hardcoded drivers?", "k": "theory"}, {"t": "What is a device tree overlay? How is it used to dynamically add peripherals at runtime?", "k": "theory"}, {"t": "What is a PMIC (Power Management IC)? What regulators and sequences must be configured for SoC power-up?", "k": "theory"}, {"t": "What is a bring-up checklist for DRAM? How do you validate DDR training and eye diagram?", "k": "theory"}, {"t": "What is JTAG bring-up? How do you use OpenOCD + GDB to debug a board before the OS boots?", "k": "theory"}, {"t": "What is I2C bring-up? How do you verify I2C bus health with a logic analyzer?", "k": "theory"}, {"t": "What is UART console bring-up? How do you find the correct UART and baud rate on a new board?", "k": "theory"}, {"t": "What is an EEPROM on a board? What information (MAC address, serial number, calibration) does it store?", "k": "theory"}, {"t": "What is PCIe enumeration during bring-up? How do you debug a device not appearing in lspci?", "k": "theory"}, {"t": "What is thermal bring-up? How do you validate CPU temperature reporting and throttling thresholds?", "k": "theory"}, {"t": "Write a U-Boot SPL in C for a custom Cortex-A board: initialize DRAM, load U-Boot proper from eMMC.", "k": "code"}, {"t": "Write a device tree node for a custom I2C temperature sensor: reg, compatible, interrupt, pinctrl.", "k": "code"}, {"t": "Write a Linux kernel driver bring-up test: probe an I2C device, read a register, log to dmesg.", "k": "code"}, {"t": "Write an OpenOCD config file for a custom ARM Cortex-A53 board with JTAG interface.", "k": "code"}, {"t": "Write a PMIC initialization sequence in C: configure LDO voltages, enable regulators in required order.", "k": "code"}, {"t": "Write a DDR eye diagram test script using vendor memory test tools on Xilinx MPSoC.", "k": "code"}, {"t": "Write a U-Boot environment variable script that sets bootargs and loads kernel from NFS.", "k": "code"}, {"t": "Write a bring-up smoke test suite in shell: verify UART, I2C devices, SPI flash, and Ethernet.", "k": "code"}, {"t": "Write a Python script that reads board identity from EEPROM via I2C and validates it against a manifest.", "k": "code"}, {"t": "Write a thermal throttling test in C: stress all CPU cores, monitor temperature, verify clock scaling.", "k": "code"}, {"t": "What is a reset controller in Linux? How does a driver assert and deassert peripheral reset lines?", "k": "theory"}, {"t": "What is a pinctrl subsystem in Linux? How does it manage pin muxing and GPIO configuration?", "k": "theory"}, {"t": "What is regulator framework in Linux? How do drivers request a supply and set voltage?", "k": "theory"}, {"t": "What is clk framework in Linux? How do drivers request and enable clocks?", "k": "theory"}, {"t": "What is a remoteproc subsystem in Linux? How does it load and manage firmware on a remote CPU core?", "k": "theory"}],
+  "m18": [{"t": "What is a hardware PMU (Performance Monitoring Unit)? What events can you count on x86 and ARM?", "k": "theory"}, {"t": "What is Intel perf-stat? How do you measure IPC, cache miss rate, and branch misprediction?", "k": "theory"}, {"t": "What is the perf tool? How do you use perf record + perf report to profile a workload?", "k": "theory"}, {"t": "What is LIKWID? How does it provide hardware performance counter access for HPC applications?", "k": "theory"}, {"t": "What is the roofline model? How does arithmetic intensity determine memory-bound vs compute-bound?", "k": "theory"}, {"t": "What is cache hierarchy profiling? How do you measure L1/L2/L3 miss rates and their penalties?", "k": "theory"}, {"t": "What is a memory access pattern? Compare sequential, strided, and random access and their cache behavior.", "k": "theory"}, {"t": "What is false sharing? How does padding cache-line-sized structures prevent it?", "k": "theory"}, {"t": "What is NUMA memory placement? How does numactl --membind optimize memory locality?", "k": "theory"}, {"t": "What is Intel VTune? How do its hotspot, microarchitecture, and memory analyses differ?", "k": "theory"}, {"t": "What is ARM Streamline? How does it profile Cortex-A and Mali GPU simultaneously?", "k": "theory"}, {"t": "What is a superscalar CPU? How do out-of-order execution and instruction-level parallelism interact?", "k": "theory"}, {"t": "What is loop unrolling? How does it reduce loop overhead and expose more instruction-level parallelism?", "k": "theory"}, {"t": "What is SIMD auto-vectorization? What compiler flags (-O3, -march=native) enable it?", "k": "theory"}, {"t": "What is PGO (Profile-Guided Optimization)? How does it use runtime profiles to improve branch prediction?", "k": "theory"}, {"t": "Write a LIKWID-annotated benchmark in C that measures L3 bandwidth on a Xeon server.", "k": "code"}, {"t": "Write an Intel ISPC kernel that vectorizes a tone-mapping function for AVX-512.", "k": "code"}, {"t": "Write a PMU-based cycle-accurate timer in C using RDPMC on x86.", "k": "code"}, {"t": "Write a false sharing benchmark: demonstrate and fix performance impact on two threads sharing a cache line.", "k": "code"}, {"t": "Write a NUMA bandwidth benchmark using numactl: compare local vs remote node memory access throughput.", "k": "code"}, {"t": "Write an ARM Neoverse N1 PMU event collection script in perf: measure frontend stalls and backend bound.", "k": "code"}, {"t": "Write a cache-oblivious matrix transpose in C and compare with naive row-major transpose.", "k": "code"}, {"t": "Write an AVX-512 dot product in C intrinsics and benchmark against scalar and auto-vectorized versions.", "k": "code"}, {"t": "Write a perf-stat wrapper script that runs a benchmark, collects PMU events, and formats a report.", "k": "code"}, {"t": "Write a PGO optimization pipeline in bash: instrument build, run workload, profile-guided rebuild, benchmark.", "k": "code"}, {"t": "What is memory bandwidth saturation? How do you detect it and what architectural changes help?", "k": "theory"}, {"t": "What is branch predictor warm-up? How does misprediction rate change from cold to hot runs?", "k": "theory"}, {"t": "What is the critical path in an OoO CPU? How does dependency chains limit ILP?", "k": "theory"}, {"t": "What is vectorization cost model? How does the compiler decide loop vectorization profitability?", "k": "theory"}, {"t": "What is LTO (Link-Time Optimization)? How does it enable cross-translation-unit inlining?", "k": "theory"}]
+};
+const MODULES_TOTALS={"m01":30,"m02":30,"m03":30,"m04":30,"m05":30,"m06":30,"m07":30,"m08":30,"m09":30,"m10":30,"m11":30,"m12":30,"m13":30,"m14":30,"m15":30,"m16":30,"m17":30,"m18":30};
+let saved={};
+try{saved=JSON.parse(localStorage.getItem(SKEY)||'{}')}catch(e){}
+let currentMid=null,rendered={};
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function goToIssue(key){
+  const inp=document.getElementById('iss-'+key);if(!inp)return;
+  const n=parseInt(inp.value.trim());
+  if(!n||n<1){inp.focus();inp.style.borderColor='#e84393';setTimeout(()=>{inp.style.borderColor='';},800);return;}
+  window.open('https://github.com/'+GH_REPO+'/issues/'+n,'_blank','noopener');
+}
+function saveIssue(key){
+  const inp=document.getElementById('iss-'+key);if(!inp)return;
+  const n=inp.value.trim();const btn=document.getElementById('issbtn-'+key);
+  if(n&&parseInt(n)>0){saved[key+'_iss']=n;if(btn)btn.classList.add('has-issue');}
+  else{delete saved[key+'_iss'];if(btn)btn.classList.remove('has-issue');}
+  try{localStorage.setItem(SKEY,JSON.stringify(saved))}catch(e){}
+}
+function renderModule(mid){
+  if(rendered[mid])return;rendered[mid]=true;
+  const tbody=document.getElementById(mid+'-tbody');if(!tbody)return;
+  const qs=MODULES_DATA[mid]||[];tbody.innerHTML='';
+  qs.forEach((item,i)=>{
+    const key=mid+'_q'+i;
+    const isDone=saved[key]===true;
+    const savedIss=saved[key+'_iss']||'';
+    const ty=item.k==='code'?'code':'theory';
+    const tyClass=ty==='code'?'type-code':'type-theory';
+    const qnum='Q'+String(i+1).padStart(3,'0');
+    const hasIssue=savedIss?' has-issue':'';
+    const tr=document.createElement('tr');
+    tr.className='q-row'+(isDone?' checked':'');
+    tr.innerHTML=
+      '<td><div class="q-check'+(isDone?' checked':'')+'" data-key="'+key+'" data-mid="'+mid+'" onclick="toggleQ(this)"></div></td>'+
+      '<td class="q-num">'+qnum+'</td>'+
+      '<td class="q-text">'+escapeHtml(item.t)+'</td>'+
+      '<td><span class="q-type '+tyClass+'">'+ty+'</span></td>'+
+      '<td><div class="q-issue-cell">'+
+        '<input class="q-issue-input" id="iss-'+key+'" data-qkey="'+key+'" type="number" min="1" placeholder="#" value="'+escapeHtml(savedIss)+'" onchange="saveIssue('+JSON.stringify(key)+')" />'+
+        '<button class="q-issue-btn'+hasIssue+'" id="issbtn-'+key+'" onclick="saveIssue('+JSON.stringify(key)+');goToIssue('+JSON.stringify(key)+')">↗ open</button>'+
+      '</div></td>';
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('.q-issue-input').forEach(function(inp){
+    inp.addEventListener('keydown',function(e){
+      if(e.key==='Enter'){saveIssue(this.dataset.qkey);goToIssue(this.dataset.qkey);}
+    });
+  });
+  updateModuleProgress(mid);
+}
+function toggleQ(el){
+  const key=el.dataset.key,mid=el.dataset.mid,row=el.closest('tr');
+  const isDone=!el.classList.contains('checked');
+  saved[key]=isDone;try{localStorage.setItem(SKEY,JSON.stringify(saved))}catch(e){}
+  el.classList.toggle('checked',isDone);row.classList.toggle('checked',isDone);
+  updateModuleProgress(mid);updateGlobal();
+}
+function updateModuleProgress(mid){
+  const total=MODULES_TOTALS[mid]||0;let done=0;
+  for(let i=0;i<total;i++)if(saved[mid+'_q'+i])done++;
+  const pct=total?Math.round(done/total*100):0;
+  const prog=document.getElementById(mid+'-prog');
+  const bar=document.getElementById(mid+'-bar');
+  const barpct=document.getElementById(mid+'-barpct');
+  const status=document.getElementById(mid+'-status');
+  if(prog)prog.textContent=done+'/'+total;
+  if(bar)bar.style.width=pct+'%';
+  if(barpct)barpct.textContent=pct+'%';
+  if(status){
+    if(done===0){status.textContent='Not started';status.className='module-status status-notstarted';}
+    else if(done===total&&total>0){status.textContent='Complete ✓';status.className='module-status status-done';}
+    else{status.textContent='In progress';status.className='module-status status-inprogress';}
+  }
+}
+function updateGlobal(){
+  let totalDone=0,modsDone=0,totalQ=0;
+  Object.keys(MODULES_TOTALS).forEach(mid=>{
+    const t=MODULES_TOTALS[mid];totalQ+=t;let d=0;
+    for(let i=0;i<t;i++)if(saved[mid+'_q'+i])d++;
+    totalDone+=d;if(d===t&&t>0)modsDone++;
+  });
+  const pct=totalQ?Math.round(totalDone/totalQ*100):0;
+  const e1=document.getElementById('gp-done');
+  const e2=document.getElementById('gp-pct');
+  const e3=document.getElementById('gp-mods');
+  const e4=document.getElementById('gp-fill');
+  if(e1)e1.textContent=totalDone;if(e2)e2.textContent=pct+'%';
+  if(e3)e3.textContent=modsDone;if(e4)e4.style.width=pct+'%';
+}
+function activateModule(mid){
+  if(currentMid===mid)return;
+  if(currentMid){
+    const prev=document.getElementById('view-'+currentMid);if(prev)prev.classList.remove('active');
+    const prevNav=document.querySelector('.nav-mod[data-mid="'+currentMid+'"]');if(prevNav)prevNav.classList.remove('active');
+  }
+  currentMid=mid;renderModule(mid);
+  const view=document.getElementById('view-'+mid);if(view)view.classList.add('active');
+  const nav=document.querySelector('.nav-mod[data-mid="'+mid+'"]');if(nav)nav.classList.add('active');
+}
+document.querySelectorAll('.nav-mod').forEach(a=>{
+  a.addEventListener('click',function(e){
+    e.preventDefault();activateModule(this.dataset.mid);
+    document.getElementById('main-stage').scrollIntoView({behavior:'smooth'});
+  });
+});
+activateModule(Object.keys(MODULES_TOTALS)[0]);
+updateGlobal();
+</script>
+</body>
+</html>
